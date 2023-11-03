@@ -191,6 +191,7 @@ void retro_get_system_info( struct retro_system_info* info )
   info->need_fullpath    = false;
   info->block_extract    = false;
   info->valid_extensions = "mgw";
+  log_cb( RETRO_LOG_INFO, "retro_get_system_info() exiting\n");
 }
 
 void retro_set_environment( retro_environment_t cb )
@@ -232,10 +233,12 @@ void retro_set_environment( retro_environment_t cb )
   cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
   cb( RETRO_ENVIRONMENT_SET_CONTENT_INFO_OVERRIDE,
         (void*)content_overrides);
+  log_cb( RETRO_LOG_INFO, "retro_set_environment() exiting\n");
 }
 
 unsigned retro_api_version(void)
 {
+  log_cb( RETRO_LOG_INFO, "retro_api_version() exiting\n");
   return RETRO_API_VERSION;
 }
 
@@ -248,6 +251,7 @@ void retro_init(void)
 
   if (env_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
      libretro_supports_bitmasks = true;
+  log_cb( RETRO_LOG_INFO, "retro_init() exiting\n");
 }
 
 extern const char* gw_gitstamp;
@@ -278,70 +282,83 @@ bool retro_load_game( const struct retro_game_info* info )
    if (env_cb(RETRO_ENVIRONMENT_GET_GAME_INFO_EXT, &info_ext) &&
          info_ext->persistent_data)
    {
+log_cb( RETRO_LOG_INFO, "retro_load_game() 1\n");
       libretro_supports_persistent_buffer = true;
       rom_data                            = (const uint8_t*)info_ext->data;
       rom_size                            = info_ext->size;
    }
    else
    {
+log_cb( RETRO_LOG_INFO, "retro_load_game() 2\n");
       libretro_supports_persistent_buffer = false;
       rom_data                            = (const uint8_t*)info->data;
       rom_size                            = info->size;
       /* If buffer is not persistent, we need to copy always */
       rom_flags                           = GWROM_COPY_ALWAYS;
    }
-
+log_cb( RETRO_LOG_INFO, "retro_load_game() 3\n");
    res = gwrom_init( &rom, (void*)rom_data, rom_size, rom_flags);
-
+log_cb( RETRO_LOG_INFO, "retro_load_game() 4\n");
    if ( res != GWROM_OK )
    {
+log_cb( RETRO_LOG_INFO, "retro_load_game() 5\n");
       log_cb( RETRO_LOG_ERROR, "Error initializing the rom: ",
             gwrom_error_message( res ) );
       init = -1;
       return false;
    }
-
+log_cb( RETRO_LOG_INFO, "retro_load_game() 6\n");
    env_cb( RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, input_descriptors );
+log_cb( RETRO_LOG_INFO, "retro_load_game() 7\n");
    memset( (void*)&state, 0, sizeof( state ) );
+log_cb( RETRO_LOG_INFO, "retro_load_game() 8\n");
    state.width  = 128;
    state.height = 128;
    init         = 0;
+   log_cb( RETRO_LOG_INFO, "retro_load_game() exiting\n");
    return true;
 }
 
 size_t retro_get_memory_size( unsigned id )
 {
+  log_cb( RETRO_LOG_INFO, "retro_get_memory_size() exiting\n");
   return id == RETRO_MEMORY_SAVE_RAM ? sizeof( sram ) : 0;
 }
 
 void* retro_get_memory_data( unsigned id )
 {
+  log_cb( RETRO_LOG_INFO, "retro_get_memory_data() exiting\n");
   return id == RETRO_MEMORY_SAVE_RAM ? (void*)&sram : NULL;
 }
 
 void retro_set_video_refresh( retro_video_refresh_t cb )
 {
   video_cb = cb;
+  log_cb( RETRO_LOG_INFO, "retro_set_video_refresh() exiting\n");
 }
 
 void retro_set_audio_sample( retro_audio_sample_t cb )
 {
   (void)cb;
+  log_cb( RETRO_LOG_INFO, "retro_set_audio_sample() exiting\n");
 }
 
 void retro_set_audio_sample_batch( retro_audio_sample_batch_t cb )
 {
   audio_cb = cb;
+  log_cb( RETRO_LOG_INFO, "retro_set_audio_sample_batch() exiting\n");
 }
 
 void retro_set_input_state( retro_input_state_t cb )
 {
   input_state_cb = cb;
+  log_cb( RETRO_LOG_INFO, "retro_set_input_state() exiting\n");
 }
 
 void retro_set_input_poll( retro_input_poll_t cb )
 {
   input_poll_cb = cb;
+  log_cb( RETRO_LOG_INFO, "retro_set_input_poll() exiting\n");
 }
 
 void retro_get_system_av_info( struct retro_system_av_info* info )
@@ -357,10 +374,12 @@ void retro_get_system_av_info( struct retro_system_av_info* info )
 #else
   info->timing.sample_rate = 11025.0;
 #endif
+  log_cb( RETRO_LOG_INFO, "retro_get_system_av_info() exiting\n");
 }
 
 void retro_run(void)
 {
+log_cb( RETRO_LOG_INFO, "retro_run()\n");
    unsigned id;
    int16_t inputs[2];
    int16_t x, y;
@@ -457,7 +476,7 @@ void retro_run(void)
    // 2. Largest width is around 512
    // 3. It keeps looking into buffer even after video_cb call
 
-#ifdef PSP
+#if defined(PSP) || defined (SF2000)
    {
      int in_width = soft_width;
      int divisor = (in_width + 511) / 512;
@@ -497,6 +516,7 @@ void retro_run(void)
    video_cb( state.screen + offset, soft_width, soft_height, state.width * sizeof( uint16_t ) );
 #endif
    audio_cb( rl_sound_mix(), RL_SAMPLES_PER_FRAME );
+log_cb( RETRO_LOG_INFO, "retro_run() exiting\n");
 }
 
 void retro_deinit(void) { libretro_supports_bitmasks = false; }
@@ -515,6 +535,7 @@ void retro_unload_game(void)
   gwlua_destroy(&state);
   gwrom_destroy(&rom);
   libretro_supports_persistent_buffer = false;
+  log_cb( RETRO_LOG_INFO, "retro_unload_game() exiting\n");
 }
 
 unsigned retro_get_region(void) { return RETRO_REGION_NTSC; }
