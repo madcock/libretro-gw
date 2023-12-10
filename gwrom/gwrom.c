@@ -14,9 +14,6 @@ zlib
 
 #include <zlib.h>
 
-
-void xlog(const char *fmt, ...);
-
 /* use gwrom allocation routines */
 void* zalloc( void* opaque, uInt items, uInt size ) { return gwrom_malloc( items * size ); }
 
@@ -118,7 +115,11 @@ static int decompress_bzip2( void** new_data, size_t* new_size,
    /* first decompression run: evaluate size of decompressed data */
    for ( ;; )
    {
-      char buffer[ GWROM_DECOMP_BUFFER ];
+#if !defined(SF2000)
+	  char buffer[ GWROM_DECOMP_BUFFER ];
+#else
+	  static char buffer[ GWROM_DECOMP_BUFFER ];
+#endif
       stream.next_out = buffer;
       stream.avail_out = sizeof( buffer );
 
@@ -177,7 +178,11 @@ static int decompress_bzip2( void** new_data, size_t* new_size,
    for ( ;; )
    {
       size_t count;
+#if !defined(SF2000)
       char buffer[ GWROM_DECOMP_BUFFER ];
+#else
+	  static char buffer[ GWROM_DECOMP_BUFFER ];
+#endif
       stream.next_out = buffer;
       stream.avail_out = sizeof( buffer );
 
@@ -510,55 +515,41 @@ int gwrom_init( gwrom_t* gwrom, void* data, size_t size, uint32_t flags )
    const methods_t* meth;
    /* check for compressed roms first */
    const decompress_t* decomp = decompress;
-xlog("1\n");
    for ( i = 0; i < sizeof( decompress ) / sizeof( decompress[ 0 ] ); i++, decomp++ )
    {
-xlog("2\n");
       if ( decomp->identify( data, size ) == GWROM_OK )
       {
-xlog("3\n");
          if ( decomp->decompress( &new_data, &new_size, data, size ) != GWROM_OK )
             return GWROM_INVALID_ROM;
-xlog("4\n");
          /* check if data was copied into a new buffer */
          if ( new_data != data ) { /* yes, set flags to free the data */
-xlog("5\n");
             flags |= GWROM_FREE_DATA;
          }
          else
          {
-xlog("6\n");
             /* no, check if the caller has asked to copy it */
             if ( flags & GWROM_COPY_ALWAYS )
             {
-xlog("7\n");
                /* yes, copy data into a new buffer */
                new_data = gwrom_malloc( size );
-xlog("8\n");
                if ( !new_data )
                   return GWROM_NO_MEMORY;
-xlog("9\n");
                memcpy( new_data, data, size );
                new_size = size;
-xlog("10\n");
                /* set flags to free the data */
                flags |= GWROM_FREE_DATA;
             }
          }
-xlog("11\n");
          break;
       }
    }
-xlog("12\n");
    /* iterates over the supported types and compress algorithms */
    meth = methods;
 
    for ( i = 0; i < sizeof( methods ) / sizeof( methods[ 0 ] ); i++, meth++ )
    {
-xlog("13\n");
       if ( meth->identify( new_data, new_size ) == GWROM_OK )
       {
-xlog("14\n");
          /* type was identified, fill in gwrom and call its init method */
          gwrom->data    = new_data;
          gwrom->size    = new_size;
@@ -569,7 +560,6 @@ xlog("14\n");
          return meth->init( gwrom );
       }
    }
-xlog("15\n");
    /* rom not identified */
    return GWROM_INVALID_ROM;
 }
